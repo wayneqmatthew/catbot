@@ -9,11 +9,88 @@ from cat_env import make_env
 # TODO: YOU MAY ADD ADDITIONAL IMPORTS OR FUNCTIONS HERE.                   #
 #############################################################################
 
+## utils
+def extract_positions_bot(state):
+    bot_pos = state / 100
+
+    return int(bot_pos)
+    
+def extract_positions_cat(state):
+    cat_pos = state % 100
+
+    return int(cat_pos)
+
+def manhattan_distance(bot_pos, cat_pos):
+    start_x = int(bot_pos / 10)
+    start_y = int(bot_pos % 10)
+    goal_x = int(cat_pos / 10)
+    goal_y = int(cat_pos % 10)
+
+    distance = abs(start_x - goal_x) + abs(start_y - goal_y)
+    
+    return distance 
+
+def cat_near_edge(new_cat_pos):
+    cat_x = int(new_cat_pos / 10)
+    cat_y = int(new_cat_pos % 10)
+
+    for i in range (4):
+        if i == 0:
+            x, y = 0,0
+
+        elif i == 1:
+            x, y = 0, 6
+
+        elif i == 2:
+            x, y = 6, 0
+
+        elif i == 3:
+            x, y = 6, 6
+
+        for j in range (x, x+2):
+            for k in range (y, y+2):
+                if cat_x == j and cat_y == k:
+                    return True
+    
+    return False
 
 
 
+def calculate_reward(old_state, new_state, done, step_count):
+    #Get positions
+    old_bot_pos = extract_positions_bot(old_state)
+    old_cat_pos = extract_positions_cat(old_state)
+    new_bot_pos = extract_positions_bot(new_state)
+    new_cat_pos = extract_positions_cat(new_state)
 
+    #calculate distance
+    old_distance = manhattan_distance(old_bot_pos, old_cat_pos)
+    new_distance = manhattan_distance(new_bot_pos, new_cat_pos)
 
+    reward = -0.5 #base reward per step
+
+    #reward for catching the cat
+    if done and new_distance == 0:
+        return 100
+    
+    #reward for over steps
+    if step_count >= 60:
+        return -50
+
+    #reward for distance
+    if new_distance < old_distance:
+        if old_distance > 4:
+            reward += 2 #since some cats are harder to chase when we get closer we don't reward being super close
+        elif old_distance > 1:
+            reward += 1
+        else:
+            reward -= 1
+
+    if cat_near_edge(new_cat_pos) and new_distance < 4:
+        reward += 3
+
+    return reward
+    
 
 
 #############################################################################
@@ -39,16 +116,12 @@ def train_bot(cat_name, render: int = -1):
     # training process such as learning rate, exploration rate, etc.            #
     #############################################################################
     
-    
+    learning_rate = 0.1
+    discount_factor = 0.95
 
-
-
-
-
-
-
-
-
+    ## always make sure that exploration_rate never goes to zero, atleast 5%
+    exploration_rate = 0.3
+    epsilon_decay = 0.995
     
     #############################################################################
     # END OF YOUR CODE. DO NOT MODIFY ANYTHING BEYOND THIS LINE.                #
