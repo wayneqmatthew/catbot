@@ -152,7 +152,7 @@ def train_bot(cat_name, render: int = -1):
                 action = np.argmax(q_table[state]) #else we will base it of the values in the qtable "Exploitation"
 
             #take the action
-            new_state, env_reward, done, truncated, info = env.step(action)
+            new_state, env_reward, done, truncated, info = env.step(action) #we never really use env_reward, truncated, and info its just part of the tuple that the step function returns
             step_count += 1
 
             reward = calculate_reward(state, new_state, done, step_count) #the env_reward we get fromm the action is zero which is why we solve for reward manually
