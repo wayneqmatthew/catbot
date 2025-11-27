@@ -67,24 +67,40 @@ def calculate_reward(old_state, new_state, done, step_count):
     old_distance = manhattan_distance(old_bot_pos, old_cat_pos)
     new_distance = manhattan_distance(new_bot_pos, new_cat_pos)
 
-    reward = -0.5 #base reward per step
+    reward = -1.0 #base reward per step
 
     #reward for catching the cat
     if done and new_distance == 0:
-        return 100
+        return 150
     
     #reward for over steps
     if step_count >= 60:
         return -50
 
     #reward for distance
+    # if new_distance < old_distance:
+    #     if old_distance > 4:
+    #         reward += 2 #since some cats are harder to chase when we get closer we don't reward being super close
+    #     elif old_distance > 1:
+    #         reward += 1
+    #     else:
+    #         reward -= 1
+
     if new_distance < old_distance:
-        if old_distance > 4:
-            reward += 2 #since some cats are harder to chase when we get closer we don't reward being super close
-        elif old_distance > 1:
-            reward += 1
+        if new_distance == 0:
+            reward += 20
+        elif new_distance == 1:
+            reward += 10
+        elif new_distance <= 3:
+            reward += 8
         else:
-            reward -= 1
+            reward += 4
+
+    elif new_distance > old_distance:
+        reward -= 5
+
+    if old_bot_pos == new_bot_pos:
+        reward -= 5
 
     if cat_near_edge(new_cat_pos) and new_distance < 4:
         reward += 3
@@ -116,11 +132,11 @@ def train_bot(cat_name, render: int = -1):
     # training process such as learning rate, exploration rate, etc.            #
     #############################################################################
     
-    learning_rate = 0.1
+    learning_rate = 0.2
     discount_factor = 0.95
     exploration_rate = 1.0 # always make sure that exploration_rate never goes to zero, atleast 5% || exploration rate starts at 1 for full exploration then decays over time
-    epsilon_decay = 0.995
-    minimum_epsilon = 0.01
+    epsilon_decay = 0.996
+    minimum_epsilon = 0.05
 
     
     #############################################################################
@@ -143,6 +159,14 @@ def train_bot(cat_name, render: int = -1):
         done = False
         step_count = 0
 
+        ## new stuff for oscilliation. specificalkly initializing the previous states
+        action_history = []
+        state_history = [state]
+        previous_state = state
+
+        state_visit_count = {}
+        state_visit_count[state] = 1
+
         #loop per episode
         while not done and step_count < 60:
             #if random value is less than exploration rate then we will do a random action "Exploration"
@@ -156,6 +180,43 @@ def train_bot(cat_name, render: int = -1):
             step_count += 1
 
             reward = calculate_reward(state, new_state, done, step_count) #the env_reward we get fromm the action is zero which is why we solve for reward manually
+
+            ## START
+            if new_state in state_visit_count:
+                state_visit_count[new_state] += 1
+                reward -= (10 * state_visit_count[new_state])
+            else:
+                state_visit_count[new_state] = 1
+
+            action_history.append(action)
+
+            if len(action_history) >= 4:
+                last_4 = action_history[-4:]
+                if last_4[0] == last_4[2] and last_4[1] == last_4[3] and last_4[0] != last_4[1]:
+                    reward -= 50
+
+            if len(action_history) >= 6:
+                last_6 = action_history[-6:]
+                if(last_6[0] == last_6[2] == last_6[4] and last_6[1] == last_6[3] == last_6[5] and last_6[0] != last_6[1]):
+                    reward -= 80
+
+            if previous_state == new_state:
+                reward -= 10
+
+            ## punishes if it kept oscillating
+            if len(state_history) >= 3:
+                if new_state in state_history[-3:]:
+                    reward -= 25
+
+            if len(state_history) >= 4:
+                if state_history[-2] == new_state and state_history[-4] == new_state:
+                    reward -= 60
+
+            state_history.append(new_state)
+            previous_state = new_state
+
+            ##END OF THIS FUCKINJG COPDE  HDAOIDHOIAHDO
+
 
             #needed variables for Q-Learning formula
             old_q_value = q_table[state][action] #old q value

@@ -269,6 +269,54 @@ class TrainerCat(Cat):
         # 2. Check distances
         # 3. Implement your own movement strategy
         # 4. Test different learning algorithms
+    
+        current_distance = abs(self.pos[0] - self.player_pos[0]) + abs(self.pos[1] - self.player_pos[1])
+        
+        # Behavior: ALWAYS run away when player is close
+        if current_distance <= 5 and self.player_moved_closer():
+            # Find move that maximizes distance
+            possible_moves = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+            random.shuffle(possible_moves)
+            best_move = None
+            best_distance = -1
+            
+            for dr, dc in possible_moves:
+                new_r = min(max(0, self.pos[0] + dr), self.grid_size - 1)
+                new_c = min(max(0, self.pos[1] + dc), self.grid_size - 1)
+                distance = abs(new_r - self.player_pos[0]) + abs(new_c - self.player_pos[1])
+                
+                if distance > best_distance:
+                    best_move = (dr, dc)
+                    best_distance = distance
+            
+            if best_move:
+                self.pos[0] = min(max(0, self.pos[0] + best_move[0]), self.grid_size - 1)
+                self.pos[1] = min(max(0, self.pos[1] + best_move[1]), self.grid_size - 1)
+                return
+        
+        # When far away: move randomly (gives bot a chance)
+        if current_distance > 5:
+            dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+            random.shuffle(dirs)
+            d = dirs[0]
+            new_r = min(max(0, self.pos[0] + d[0]), self.grid_size - 1)
+            new_c = min(max(0, self.pos[1] + d[1]), self.grid_size - 1)
+            self.pos[0] = new_r
+            self.pos[1] = new_c
+            return
+        
+        # Medium distance: stay still sometimes (makes it catchable)
+        if random.random() < 0.4:  # 40% chance stay still
+            return
+        
+        # Otherwise random move
+        dirs = [(-1, 0), (1, 0), (0, -1), (0, 1)]
+        random.shuffle(dirs)
+        d = dirs[0]
+        new_r = min(max(0, self.pos[0] + d[0]), self.grid_size - 1)
+        new_c = min(max(0, self.pos[1] + d[1]), self.grid_size - 1)
+        self.pos[0] = new_r
+        self.pos[1] = new_c
         return
 
 #######################################
