@@ -118,10 +118,10 @@ def train_bot(cat_name, render: int = -1):
     
     learning_rate = 0.1
     discount_factor = 0.95
-
-    ## always make sure that exploration_rate never goes to zero, atleast 5%
-    exploration_rate = 0.3
+    exploration_rate = 1.0 # always make sure that exploration_rate never goes to zero, atleast 5% || exploration rate starts at 1 for full exploration then decays over time
     epsilon_decay = 0.995
+    minimum_epsilon = 0.01
+
     
     #############################################################################
     # END OF YOUR CODE. DO NOT MODIFY ANYTHING BEYOND THIS LINE.                #
@@ -139,47 +139,47 @@ def train_bot(cat_name, render: int = -1):
         # 5. Update the Q-table accordingly based on agent's rewards.                #
         ############################################################################## 
                
-        
+        state, _ = env.reset()
+        done = False
+        step_count = 0
+
+        #loop per episode
+        while not done and step_count < 60:
+            #if random value is less than exploration rate then we will do a random action "Exploration"
+            if random.random() < exploration_rate: #.random() returns a random float between 0 and 1
+                action = env.action_space.sample()
+            else:
+                action = np.argmax(q_table[state]) #else we will base it of the values in the qtable "Exploitation"
+
+            #take the action
+            new_state, env_reward, done, truncated, info = env.step(action)
+            step_count += 1
+
+            reward = calculate_reward(state, new_state, done, step_count) #the env_reward we get fromm the action is zero which is why we solve for reward manually
+
+            #needed variables for Q-Learning formula
+            old_q_value = q_table[state][action] #old q value
+            max_future_q = np.max(q_table[new_state])  #returns the highest value on the q_table
+
+            new_q_value = old_q_value + learning_rate * (reward + discount_factor * max_future_q - old_q_value) #based on Q-Learning Formula 
+
+            q_table[state][action] = new_q_value #we update the value on the qtable with the new recently computed value
+
+            state = new_state #update states
 
 
+        #apply the decay on the exploration rate
+        exploration_rate = max(minimum_epsilon, exploration_rate * epsilon_decay)
 
 
+    #############################################################################
+    # END OF YOUR CODE. DO NOT MODIFY ANYTHING BEYOND THIS LINE.                #
+    #############################################################################
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-        
-        
-        #############################################################################
-        # END OF YOUR CODE. DO NOT MODIFY ANYTHING BEYOND THIS LINE.                #
-        #############################################################################
-
-        # If rendering is enabled, play an episode every 'render' episodes
-        if render != -1 and (ep == 1 or ep % render == 0):
-            viz_env = make_env(cat_type=cat_name)
-            play_q_table(viz_env, q_table, max_steps=100, move_delay=0.02, window_title=f"{cat_name}: Training Episode {ep}/{episodes}")
-            print('episode', ep)
+    # If rendering is enabled, play an episode every 'render' episodes
+    if render != -1 and (ep == 1 or ep % render == 0):
+        viz_env = make_env(cat_type=cat_name)
+        play_q_table(viz_env, q_table, max_steps=100, move_delay=0.02, window_title=f"{cat_name}: Training Episode {ep}/{episodes}")
+        print('episode', ep)
 
     return q_table
