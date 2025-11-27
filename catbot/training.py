@@ -215,8 +215,6 @@ def train_bot(cat_name, render: int = -1):
             state_history.append(new_state)
             previous_state = new_state
 
-            ##END OF THIS FUCKINJG COPDE  HDAOIDHOIAHDO
-
 
             #needed variables for Q-Learning formula
             old_q_value = q_table[state][action] #old q value
